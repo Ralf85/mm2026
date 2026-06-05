@@ -1,0 +1,17 @@
+{
+  "name": "mm2026-ennustus",
+  "version": "1.0.0",
+  "description": "MM 2026 ennustusmäng",
+  "main": "src/server.js",
+  "scripts": {
+    "start": "node src/server.js",
+    "dev": "node src/server.js"
+  },
+  "dependencies": {
+    "express": "^4.18.2",
+    "node-fetch": "^2.7.0",
+    "@supabase/supabase-js": "^2.39.0",
+    "node-cron": "^3.0.3",
+    "cors": "^2.8.5"
+  }
+}
