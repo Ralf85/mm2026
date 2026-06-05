@@ -1,0 +1,403 @@
+<!DOCTYPE html>
+<html lang="et">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>MM 2026 Ennustusmäng</title>
+  <link href="https://fonts.googleapis.com/css2?family=Barlow+Condensed:wght@400;600;700;800&family=Barlow:wght@400;500&display=swap" rel="stylesheet">
+  <style>
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+    :root {
+      --green: #1a7a3c; --green-dark: #145e2e; --green-light: #e8f5ed;
+      --gold: #c8941a; --gold-light: #fdf3dc;
+      --red: #c0392b; --red-light: #fdecea;
+      --bg: #f4f1eb; --card: #ffffff;
+      --text: #1a1a1a; --muted: #6b6b6b; --border: #e0dbd0;
+      --radius: 12px;
+    }
+    body { font-family: 'Barlow', sans-serif; background: var(--bg); color: var(--text); min-height: 100vh; }
+
+    header { background: var(--green); color: white; padding: 1.5rem 1rem 0; text-align: center; }
+    header h1 { font-family: 'Barlow Condensed', sans-serif; font-size: 2.2rem; font-weight: 800; letter-spacing: 1px; }
+    header p { font-size: 0.85rem; opacity: 0.7; margin: 4px 0 1rem; }
+
+    .tabs { display: flex; background: var(--green-dark); overflow-x: auto; }
+    .tab { flex: 1; padding: 12px 6px; font-family: 'Barlow Condensed', sans-serif; font-size: 0.95rem; font-weight: 700; text-transform: uppercase; letter-spacing: 0.5px; color: rgba(255,255,255,0.55); background: none; border: none; border-bottom: 3px solid transparent; cursor: pointer; white-space: nowrap; transition: all 0.2s; }
+    .tab.active { color: white; border-bottom-color: var(--gold); }
+
+    .container { max-width: 640px; margin: 0 auto; padding: 1.25rem 1rem 3rem; }
+    .section { display: none; }
+    .section.active { display: block; }
+
+    .info-box { background: var(--green-light); border-left: 3px solid var(--green); border-radius: 0 8px 8px 0; padding: 10px 14px; font-size: 0.85rem; color: #2d5a3d; margin-bottom: 1rem; line-height: 1.5; }
+    .warn-box { background: var(--gold-light); border-left: 3px solid var(--gold); border-radius: 0 8px 8px 0; padding: 10px 14px; font-size: 0.85rem; color: #7a5a0a; margin-bottom: 1rem; }
+
+    .group-label { font-family: 'Barlow Condensed', sans-serif; font-size: 0.75rem; font-weight: 700; letter-spacing: 1px; text-transform: uppercase; color: var(--green); margin: 1.25rem 0 6px; }
+
+    .match-card { background: var(--card); border: 1px solid var(--border); border-radius: var(--radius); padding: 0.875rem 1rem; margin-bottom: 8px; }
+    .match-card.locked { opacity: 0.6; background: #f9f9f9; }
+    .match-meta { font-size: 0.75rem; color: var(--muted); margin-bottom: 6px; display: flex; justify-content: space-between; }
+    .match-meta .lock-badge { color: var(--red); font-weight: 600; }
+    .match-row { display: flex; align-items: center; gap: 8px; }
+    .team { font-family: 'Barlow Condensed', sans-serif; font-size: 1rem; font-weight: 600; flex: 1; text-align: center; }
+    .score-wrap { display: flex; align-items: center; gap: 5px; }
+    .score-wrap input { width: 44px; height: 38px; text-align: center; font-family: 'Barlow Condensed', sans-serif; font-size: 1.25rem; font-weight: 700; border: 1.5px solid var(--border); border-radius: 8px; background: var(--bg); color: var(--text); transition: border-color 0.2s; }
+    .score-wrap input:focus { outline: none; border-color: var(--green); background: white; }
+    .score-wrap input:disabled { background: #eee; color: #aaa; cursor: not-allowed; }
+    .score-sep { font-family: 'Barlow Condensed', sans-serif; font-size: 1.2rem; color: var(--muted); }
+    .result-display { font-family: 'Barlow Condensed', sans-serif; font-size: 1.4rem; font-weight: 700; color: var(--green); padding: 0 6px; }
+
+    .player-select-row { display: flex; align-items: center; gap: 10px; margin-bottom: 1rem; flex-wrap: wrap; }
+    .player-select-row label { font-size: 0.85rem; color: var(--muted); white-space: nowrap; }
+    select, input[type="text"] { font-family: 'Barlow', sans-serif; font-size: 0.9rem; border: 1.5px solid var(--border); border-radius: 8px; padding: 8px 12px; background: white; color: var(--text); transition: border-color 0.2s; }
+    select:focus, input[type="text"]:focus { outline: none; border-color: var(--green); }
+
+    .player-row { display: flex; gap: 8px; margin-bottom: 8px; }
+    .player-row input { flex: 1; }
+
+    .btn { display: inline-block; padding: 10px 20px; font-family: 'Barlow Condensed', sans-serif; font-size: 1rem; font-weight: 700; letter-spacing: 0.5px; text-transform: uppercase; border-radius: 8px; cursor: pointer; border: none; transition: all 0.15s; }
+    .btn-green { background: var(--green); color: white; }
+    .btn-green:hover { background: var(--green-dark); }
+    .btn-green:disabled { background: #aaa; cursor: not-allowed; }
+    .btn-outline { background: transparent; border: 1.5px dashed var(--border); color: var(--muted); width: 100%; margin-top: 6px; }
+    .btn-outline:hover { border-color: var(--green); color: var(--green); }
+    .btn-del { background: var(--red-light); border: 1px solid #f5c6c2; color: var(--red); border-radius: 8px; padding: 8px 12px; cursor: pointer; font-size: 0.85rem; flex-shrink: 0; }
+
+    .saved-ok { display: inline-block; margin-left: 10px; color: var(--green); font-size: 0.85rem; font-weight: 500; opacity: 0; transition: opacity 0.3s; }
+    .saved-ok.show { opacity: 1; }
+    .err-msg { color: var(--red); font-size: 0.85rem; margin-top: 6px; }
+
+    /* Leaderboard */
+    table { width: 100%; border-collapse: collapse; }
+    th { font-family: 'Barlow Condensed', sans-serif; font-size: 0.75rem; font-weight: 700; text-transform: uppercase; letter-spacing: 0.5px; color: var(--muted); padding: 8px 10px; border-bottom: 2px solid var(--border); text-align: left; }
+    td { padding: 11px 10px; border-bottom: 1px solid var(--border); font-size: 0.9rem; }
+    tr:last-child td { border-bottom: none; }
+    .pts { font-family: 'Barlow Condensed', sans-serif; font-size: 1.1rem; font-weight: 700; color: var(--green); }
+    .legend { background: var(--gold-light); border-left: 3px solid var(--gold); border-radius: 0 8px 8px 0; padding: 10px 14px; font-size: 0.8rem; color: #7a5a0a; margin-top: 1rem; line-height: 1.7; }
+
+    .loading { text-align: center; padding: 2rem; color: var(--muted); font-size: 0.9rem; }
+    .countdown { font-size: 0.75rem; color: var(--red); font-weight: 600; }
+  </style>
+</head>
+<body>
+
+<header>
+  <h1>⚽ MM 2026 Ennustusmäng</h1>
+  <p>Ennusta · Kogu punkte · Võida au</p>
+</header>
+
+<div class="tabs">
+  <button class="tab active" onclick="showTab('mangijad', this)">👥 Mängijad</button>
+  <button class="tab" onclick="showTab('ennustused', this)">✏️ Ennustused</button>
+  <button class="tab" onclick="showTab('mangud', this)">📅 Mängud</button>
+  <button class="tab" onclick="showTab('tabel', this)">🏆 Edetabel</button>
+</div>
+
+<div class="container">
+
+  <!-- MÄNGIJAD -->
+  <div id="tab-mangijad" class="section active">
+    <div class="info-box">Lisa kõik osalejad. Igaüks sisestab oma ennustused "Ennustused" vahekaardil.</div>
+    <div id="players-list"></div>
+    <button class="btn btn-outline" onclick="showAddPlayer()">+ Lisa mängija</button>
+    <div id="add-player-form" style="display:none; margin-top:10px;">
+      <div class="player-row">
+        <input type="text" id="new-player-name" placeholder="Mängija nimi" onkeydown="if(event.key==='Enter')addPlayer()">
+        <button class="btn btn-green" onclick="addPlayer()">Lisa</button>
+      </div>
+      <div class="err-msg" id="player-err"></div>
+    </div>
+  </div>
+
+  <!-- ENNUSTUSED -->
+  <div id="tab-ennustused" class="section">
+    <div class="player-select-row">
+      <label>Kes ennustab?</label>
+      <select id="sel-player" onchange="loadPredictions()" style="min-width:160px;">
+        <option value="">-- Vali mängija --</option>
+      </select>
+    </div>
+    <div id="preds-list"><div class="loading">Vali mängija ülalt</div></div>
+    <div id="preds-actions" style="display:none; margin-top:1rem;">
+      <button class="btn btn-green" onclick="savePredictions()">Salvesta ennustused</button>
+      <span class="saved-ok" id="ok-preds">✓ Salvestatud!</span>
+      <div class="err-msg" id="pred-err"></div>
+    </div>
+  </div>
+
+  <!-- MÄNGUD & TULEMUSED -->
+  <div id="tab-mangud" class="section">
+    <div class="info-box">Tulemused uuendatakse automaatselt pärast iga mängu.</div>
+    <div id="fixtures-list"><div class="loading">Laen mänge...</div></div>
+  </div>
+
+  <!-- EDETABEL -->
+  <div id="tab-tabel" class="section">
+    <div id="leaderboard-wrap"><div class="loading">Laen edetabelit...</div></div>
+  </div>
+
+</div>
+
+<script>
+const BASE = '';
+let allFixtures = [];
+let allPlayers = [];
+let currentPreds = {};
+
+// ── Helpers ──────────────────────────────────────────────────────────────────
+function flash(id) {
+  const el = document.getElementById(id);
+  el.classList.add('show');
+  setTimeout(() => el.classList.remove('show'), 2500);
+}
+
+function isLocked(fixture) {
+  const now = new Date();
+  const kickoff = new Date(fixture.kickoff);
+  return fixture.locked || now >= new Date(kickoff.getTime() - 5 * 60 * 1000);
+}
+
+function formatDate(iso) {
+  const d = new Date(iso);
+  return d.toLocaleDateString('et-EE', { day: 'numeric', month: 'short' }) +
+    ' ' + d.toLocaleTimeString('et-EE', { hour: '2-digit', minute: '2-digit' });
+}
+
+function minutesUntil(iso) {
+  const diff = new Date(iso) - new Date();
+  if (diff <= 0) return null;
+  const mins = Math.floor(diff / 60000);
+  if (mins < 60) return `${mins} min`;
+  const hrs = Math.floor(mins / 60);
+  if (hrs < 24) return `${hrs} h ${mins % 60} min`;
+  return `${Math.floor(hrs/24)} päeva`;
+}
+
+// ── Tabs ─────────────────────────────────────────────────────────────────────
+function showTab(name, btn) {
+  document.querySelectorAll('.section').forEach(s => s.classList.remove('active'));
+  document.querySelectorAll('.tab').forEach(b => b.classList.remove('active'));
+  document.getElementById('tab-' + name).classList.add('active');
+  btn.classList.add('active');
+  if (name === 'ennustused') { loadPlayers(); loadFixtures(); }
+  if (name === 'mangud') renderFixtures();
+  if (name === 'tabel') loadLeaderboard();
+}
+
+// ── Players ───────────────────────────────────────────────────────────────────
+async function loadPlayers() {
+  const res = await fetch(`${BASE}/api/players`);
+  allPlayers = await res.json();
+  renderPlayers();
+  updatePlayerSelect();
+}
+
+function renderPlayers() {
+  document.getElementById('players-list').innerHTML = allPlayers.length === 0
+    ? '<div class="warn-box">Mängijaid pole veel lisatud.</div>'
+    : allPlayers.map(p => `
+        <div class="player-row" style="margin-bottom:8px;">
+          <input type="text" value="${p.name}" disabled style="flex:1; background:#f9f9f9;">
+        </div>`).join('');
+}
+
+function updatePlayerSelect() {
+  const sel = document.getElementById('sel-player');
+  const cur = sel.value;
+  sel.innerHTML = '<option value="">-- Vali mängija --</option>' +
+    allPlayers.map(p => `<option value="${p.name}" ${p.name===cur?'selected':''}>${p.name}</option>`).join('');
+}
+
+function showAddPlayer() {
+  document.getElementById('add-player-form').style.display = 'block';
+  document.getElementById('new-player-name').focus();
+}
+
+async function addPlayer() {
+  const name = document.getElementById('new-player-name').value.trim();
+  document.getElementById('player-err').textContent = '';
+  if (!name) return;
+  const res = await fetch(`${BASE}/api/players`, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ name })
+  });
+  const data = await res.json();
+  if (!res.ok) {
+    document.getElementById('player-err').textContent = data.error?.message?.includes('unique') ? 'See nimi on juba olemas!' : 'Viga lisamisel';
+    return;
+  }
+  document.getElementById('new-player-name').value = '';
+  document.getElementById('add-player-form').style.display = 'none';
+  await loadPlayers();
+}
+
+// ── Fixtures ──────────────────────────────────────────────────────────────────
+async function loadFixtures() {
+  const res = await fetch(`${BASE}/api/fixtures`);
+  allFixtures = await res.json();
+}
+
+function renderFixtures() {
+  loadFixtures().then(() => {
+    if (!allFixtures.length) {
+      document.getElementById('fixtures-list').innerHTML = '<div class="loading">Mängud laetakse...</div>';
+      return;
+    }
+    const groups = {};
+    allFixtures.forEach(f => {
+      const g = f.group_name || 'Muud';
+      if (!groups[g]) groups[g] = [];
+      groups[g].push(f);
+    });
+
+    document.getElementById('fixtures-list').innerHTML = Object.entries(groups).map(([g, ms]) => `
+      <div class="group-label">${g}</div>
+      ${ms.map(f => {
+        const hasResult = f.result_home !== null && f.result_away !== null;
+        const until = minutesUntil(f.kickoff);
+        return `<div class="match-card ${isLocked(f) ? 'locked' : ''}">
+          <div class="match-meta">
+            <span>${formatDate(f.kickoff)}</span>
+            ${hasResult
+              ? `<span style="color:var(--green);font-weight:600;">Lõppenud</span>`
+              : until
+                ? `<span class="countdown">⏱ ${until} eni</span>`
+                : `<span class="lock-badge">🔒 Lukus</span>`}
+          </div>
+          <div class="match-row">
+            <div class="team">${f.home_team}</div>
+            ${hasResult
+              ? `<div class="result-display">${f.result_home} – ${f.result_away}</div>`
+              : `<div class="result-display" style="color:var(--muted);">vs</div>`}
+            <div class="team">${f.away_team}</div>
+          </div>
+        </div>`;
+      }).join('')}`).join('');
+  });
+}
+
+// ── Predictions ───────────────────────────────────────────────────────────────
+async function loadPredictions() {
+  const player = document.getElementById('sel-player').value;
+  if (!player) {
+    document.getElementById('preds-list').innerHTML = '<div class="loading">Vali mängija ülalt</div>';
+    document.getElementById('preds-actions').style.display = 'none';
+    return;
+  }
+  await loadFixtures();
+  const res = await fetch(`${BASE}/api/predictions/${encodeURIComponent(player)}`);
+  const preds = await res.json();
+  currentPreds = {};
+  preds.forEach(p => { currentPreds[p.fixture_id] = { h: p.home_score, a: p.away_score }; });
+  renderPredictions();
+  document.getElementById('preds-actions').style.display = 'block';
+}
+
+function renderPredictions() {
+  if (!allFixtures.length) {
+    document.getElementById('preds-list').innerHTML = '<div class="loading">Mänge pole veel lisatud</div>';
+    return;
+  }
+  const groups = {};
+  allFixtures.forEach(f => {
+    const g = f.group_name || 'Muud';
+    if (!groups[g]) groups[g] = [];
+    groups[g].push(f);
+  });
+
+  document.getElementById('preds-list').innerHTML = Object.entries(groups).map(([g, ms]) => `
+    <div class="group-label">${g}</div>
+    ${ms.map(f => {
+      const locked = isLocked(f);
+      const pred = currentPreds[f.id] || { h: '', a: '' };
+      const until = minutesUntil(f.kickoff);
+      return `<div class="match-card ${locked ? 'locked' : ''}">
+        <div class="match-meta">
+          <span>${formatDate(f.kickoff)}</span>
+          ${locked
+            ? `<span class="lock-badge">🔒 Lukus</span>`
+            : until ? `<span class="countdown">⏱ ${until} eni</span>` : ''}
+        </div>
+        <div class="match-row">
+          <div class="team">${f.home_team}</div>
+          <div class="score-wrap">
+            <input type="number" min="0" max="20" value="${pred.h}" placeholder="0"
+              ${locked ? 'disabled' : ''}
+              oninput="currentPreds['${f.id}']={...currentPreds['${f.id}']||{}, h:this.value}"
+              id="ph_${f.id}">
+            <span class="score-sep">–</span>
+            <input type="number" min="0" max="20" value="${pred.a}" placeholder="0"
+              ${locked ? 'disabled' : ''}
+              oninput="currentPreds['${f.id}']={...currentPreds['${f.id}']||{}, a:this.value}"
+              id="pa_${f.id}">
+          </div>
+          <div class="team">${f.away_team}</div>
+        </div>
+      </div>`;
+    }).join('')}`).join('');
+}
+
+async function savePredictions() {
+  const player = document.getElementById('sel-player').value;
+  if (!player) return;
+  document.getElementById('pred-err').textContent = '';
+  let saved = 0, errors = 0;
+
+  for (const [fixture_id, pred] of Object.entries(currentPreds)) {
+    if (pred.h === '' || pred.a === '') continue;
+    const res = await fetch(`${BASE}/api/predictions`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ player_name: player, fixture_id, home_score: pred.h, away_score: pred.a })
+    });
+    if (res.ok) saved++; else errors++;
+  }
+
+  if (errors > 0) {
+    document.getElementById('pred-err').textContent = `${errors} ennustust ei salvestatud (mäng võib olla lukus)`;
+  }
+  if (saved > 0) flash('ok-preds');
+}
+
+// ── Leaderboard ───────────────────────────────────────────────────────────────
+async function loadLeaderboard() {
+  const res = await fetch(`${BASE}/api/leaderboard`);
+  const scores = await res.json();
+  const medals = ['🥇', '🥈', '🥉'];
+
+  document.getElementById('leaderboard-wrap').innerHTML = scores.length === 0
+    ? '<div class="warn-box">Punkte pole veel. Mängud pole alanud või tulemused puuduvad.</div>'
+    : `<table>
+        <thead><tr>
+          <th></th><th>Mängija</th><th>Täpsed</th><th>Õige tulemus</th><th>Punktid</th>
+        </tr></thead>
+        <tbody>
+          ${scores.map((s, i) => `
+            <tr>
+              <td>${medals[i] || i+1}</td>
+              <td style="font-weight:500">${s.name}</td>
+              <td style="color:var(--green)">${s.exact}× (3p)</td>
+              <td style="color:var(--muted)">${s.correct}× (1p)</td>
+              <td class="pts">${s.points} p</td>
+            </tr>`).join('')}
+        </tbody>
+      </table>
+      <div class="legend">
+        🎯 Täpne tulemus = <strong>3 punkti</strong><br>
+        ✓ Õige võitja / viik = <strong>1 punkt</strong><br>
+        ✗ Vale ennustus = <strong>0 punkti</strong>
+      </div>`;
+}
+
+// ── Init ──────────────────────────────────────────────────────────────────────
+loadPlayers();
+
+// Auto-refresh leaderboard every 5 min
+setInterval(() => {
+  if (document.getElementById('tab-tabel').classList.contains('active')) loadLeaderboard();
+  if (document.getElementById('tab-mangud').classList.contains('active')) renderFixtures();
+}, 5 * 60 * 1000);
+</script>
+</body>
+</html>
