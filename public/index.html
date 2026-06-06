@@ -1,405 +1,179 @@
-<!DOCTYPE html>
-<html lang="et">
-<head>
-  <meta charset="UTF-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>MM 2026 Ennustusmäng</title>
-  <link href="https://fonts.googleapis.com/css2?family=Barlow+Condensed:wght@400;600;700;800&family=Barlow:wght@400;500&display=swap" rel="stylesheet">
-  <style>
-    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
-    :root {
-      --green: #1a7a3c; --green-dark: #145e2e; --green-light: #e8f5ed;
-      --gold: #c8941a; --gold-light: #fdf3dc;
-      --red: #c0392b; --red-light: #fdecea;
-      --bg: #f4f1eb; --card: #ffffff;
-      --text: #1a1a1a; --muted: #6b6b6b; --border: #e0dbd0;
-      --radius: 12px;
-    }
-    body { font-family: 'Barlow', sans-serif; background: var(--bg); color: var(--text); min-height: 100vh; }
+const express = require('express');
+const cors = require('cors');
+const fetch = require('node-fetch');
+const cron = require('node-cron');
+const { createClient } = require('@supabase/supabase-js');
+const path = require('path');
 
-    header { background: var(--green); color: white; padding: 1.5rem 1rem 0; text-align: center; }
-    header h1 { font-family: 'Barlow Condensed', sans-serif; font-size: 2.2rem; font-weight: 800; letter-spacing: 1px; }
-    header p { font-size: 0.85rem; opacity: 0.7; margin: 4px 0 1rem; }
+require('dotenv').config();
 
-   .tabs { display: flex; background: var(--green-dark); overflow-x: auto; justify-content: flex-start; }
-    .tab { flex: 1; padding: 12px 6px; font-family: 'Barlow Condensed', sans-serif; font-size: 0.95rem; font-weight: 700; text-transform: uppercase; letter-spacing: 0.5px; color: rgba(255,255,255,0.55); background: none; border: none; border-bottom: 3px solid transparent; cursor: pointer; white-space: nowrap; transition: all 0.2s; }
-    .tab.active { color: white; border-bottom-color: var(--gold); }
+const app = express();
+app.use(cors());
+app.use(express.json());
+app.use(express.static(path.join(__dirname, '../public')));
 
-    .container { max-width: 640px; margin: 0 auto; padding: 1.25rem 1rem 3rem; }
-    .section { display: none; }
-    .section.active { display: block; }
+const supabase = createClient(
+  process.env.SUPABASE_URL,
+  process.env.SUPABASE_ANON_KEY
+);
 
-    .info-box { background: var(--green-light); border-left: 3px solid var(--green); border-radius: 0 8px 8px 0; padding: 10px 14px; font-size: 0.85rem; color: #2d5a3d; margin-bottom: 1rem; line-height: 1.5; }
-    .warn-box { background: var(--gold-light); border-left: 3px solid var(--gold); border-radius: 0 8px 8px 0; padding: 10px 14px; font-size: 0.85rem; color: #7a5a0a; margin-bottom: 1rem; }
+const MM2026_FIXTURES = [
+  { api_id: 10001, group_name: 'Grupp A', home_team: 'Mexico', away_team: 'Morocco', kickoff: '2026-06-12T02:00:00Z', home_flag: 'MX', away_flag: 'MA' },
+  { api_id: 10002, group_name: 'Grupp A', home_team: 'USA', away_team: 'Panama', kickoff: '2026-06-12T21:00:00Z', home_flag: 'US', away_flag: 'PA' },
+  { api_id: 10003, group_name: 'Grupp A', home_team: 'Panama', away_team: 'Morocco', kickoff: '2026-06-15T18:00:00Z', home_flag: 'PA', away_flag: 'MA' },
+  { api_id: 10004, group_name: 'Grupp A', home_team: 'USA', away_team: 'Mexico', kickoff: '2026-06-16T00:00:00Z', home_flag: 'US', away_flag: 'MX' },
+  { api_id: 10005, group_name: 'Grupp A', home_team: 'USA', away_team: 'Morocco', kickoff: '2026-06-19T21:00:00Z', home_flag: 'US', away_flag: 'MA' },
+  { api_id: 10006, group_name: 'Grupp A', home_team: 'Panama', away_team: 'Mexico', kickoff: '2026-06-19T21:00:00Z', home_flag: 'PA', away_flag: 'MX' },
+  { api_id: 10007, group_name: 'Grupp B', home_team: 'Argentina', away_team: 'Albania', kickoff: '2026-06-13T00:00:00Z', home_flag: 'AR', away_flag: 'AL' },
+  { api_id: 10008, group_name: 'Grupp B', home_team: 'Ukraine', away_team: 'Morocco B', kickoff: '2026-06-12T18:00:00Z', home_flag: 'UA', away_flag: 'MA' },
+  { api_id: 10009, group_name: 'Grupp B', home_team: 'Argentina', away_team: 'Morocco B', kickoff: '2026-06-17T00:00:00Z', home_flag: 'AR', away_flag: 'MA' },
+  { api_id: 10010, group_name: 'Grupp B', home_team: 'Ukraine', away_team: 'Albania', kickoff: '2026-06-16T18:00:00Z', home_flag: 'UA', away_flag: 'AL' },
+  { api_id: 10011, group_name: 'Grupp B', home_team: 'Argentina', away_team: 'Ukraine', kickoff: '2026-06-20T21:00:00Z', home_flag: 'AR', away_flag: 'UA' },
+  { api_id: 10012, group_name: 'Grupp B', home_team: 'Morocco B', away_team: 'Albania', kickoff: '2026-06-20T21:00:00Z', home_flag: 'MA', away_flag: 'AL' },
+  { api_id: 10013, group_name: 'Grupp C', home_team: 'France', away_team: 'Guatemala', kickoff: '2026-06-13T21:00:00Z', home_flag: 'FR', away_flag: 'GT' },
+  { api_id: 10014, group_name: 'Grupp C', home_team: 'Brazil', away_team: 'Japan', kickoff: '2026-06-14T00:00:00Z', home_flag: 'BR', away_flag: 'JP' },
+  { api_id: 10015, group_name: 'Grupp C', home_team: 'France', away_team: 'Japan', kickoff: '2026-06-17T21:00:00Z', home_flag: 'FR', away_flag: 'JP' },
+  { api_id: 10016, group_name: 'Grupp C', home_team: 'Brazil', away_team: 'Guatemala', kickoff: '2026-06-18T00:00:00Z', home_flag: 'BR', away_flag: 'GT' },
+  { api_id: 10017, group_name: 'Grupp C', home_team: 'France', away_team: 'Brazil', kickoff: '2026-06-21T21:00:00Z', home_flag: 'FR', away_flag: 'BR' },
+  { api_id: 10018, group_name: 'Grupp C', home_team: 'Japan', away_team: 'Guatemala', kickoff: '2026-06-21T21:00:00Z', home_flag: 'JP', away_flag: 'GT' },
+  { api_id: 10019, group_name: 'Grupp D', home_team: 'Spain', away_team: 'Serbia', kickoff: '2026-06-13T18:00:00Z', home_flag: 'ES', away_flag: 'RS' },
+  { api_id: 10020, group_name: 'Grupp D', home_team: 'Hungary', away_team: 'South Africa', kickoff: '2026-06-14T18:00:00Z', home_flag: 'HU', away_flag: 'ZA' },
+  { api_id: 10021, group_name: 'Grupp D', home_team: 'Spain', away_team: 'South Africa', kickoff: '2026-06-17T18:00:00Z', home_flag: 'ES', away_flag: 'ZA' },
+  { api_id: 10022, group_name: 'Grupp D', home_team: 'Hungary', away_team: 'Serbia', kickoff: '2026-06-18T18:00:00Z', home_flag: 'HU', away_flag: 'RS' },
+  { api_id: 10023, group_name: 'Grupp D', home_team: 'Spain', away_team: 'Hungary', kickoff: '2026-06-22T00:00:00Z', home_flag: 'ES', away_flag: 'HU' },
+  { api_id: 10024, group_name: 'Grupp D', home_team: 'South Africa', away_team: 'Serbia', kickoff: '2026-06-22T00:00:00Z', home_flag: 'ZA', away_flag: 'RS' },
+  { api_id: 10025, group_name: 'Grupp E', home_team: 'Germany', away_team: 'Saudi Arabia', kickoff: '2026-06-14T21:00:00Z', home_flag: 'DE', away_flag: 'SA' },
+  { api_id: 10026, group_name: 'Grupp E', home_team: 'Belgium', away_team: 'New Zealand', kickoff: '2026-06-15T00:00:00Z', home_flag: 'BE', away_flag: 'NZ' },
+  { api_id: 10027, group_name: 'Grupp E', home_team: 'Germany', away_team: 'New Zealand', kickoff: '2026-06-18T21:00:00Z', home_flag: 'DE', away_flag: 'NZ' },
+  { api_id: 10028, group_name: 'Grupp E', home_team: 'Belgium', away_team: 'Saudi Arabia', kickoff: '2026-06-19T00:00:00Z', home_flag: 'BE', away_flag: 'SA' },
+  { api_id: 10029, group_name: 'Grupp E', home_team: 'Germany', away_team: 'Belgium', kickoff: '2026-06-22T21:00:00Z', home_flag: 'DE', away_flag: 'BE' },
+  { api_id: 10030, group_name: 'Grupp E', home_team: 'New Zealand', away_team: 'Saudi Arabia', kickoff: '2026-06-22T21:00:00Z', home_flag: 'NZ', away_flag: 'SA' },
+  { api_id: 10031, group_name: 'Grupp F', home_team: 'Portugal', away_team: 'Angola', kickoff: '2026-06-15T21:00:00Z', home_flag: 'PT', away_flag: 'AO' },
+  { api_id: 10032, group_name: 'Grupp F', home_team: 'Czechia', away_team: 'Turkey', kickoff: '2026-06-16T00:00:00Z', home_flag: 'CZ', away_flag: 'TR' },
+  { api_id: 10033, group_name: 'Grupp F', home_team: 'Portugal', away_team: 'Turkey', kickoff: '2026-06-19T18:00:00Z', home_flag: 'PT', away_flag: 'TR' },
+  { api_id: 10034, group_name: 'Grupp F', home_team: 'Czechia', away_team: 'Angola', kickoff: '2026-06-20T00:00:00Z', home_flag: 'CZ', away_flag: 'AO' },
+  { api_id: 10035, group_name: 'Grupp F', home_team: 'Portugal', away_team: 'Czechia', kickoff: '2026-06-23T21:00:00Z', home_flag: 'PT', away_flag: 'CZ' },
+  { api_id: 10036, group_name: 'Grupp F', home_team: 'Turkey', away_team: 'Angola', kickoff: '2026-06-23T21:00:00Z', home_flag: 'TR', away_flag: 'AO' },
+  { api_id: 10037, group_name: 'Grupp G', home_team: 'England', away_team: 'Philippines', kickoff: '2026-06-16T21:00:00Z', home_flag: 'GB-ENG', away_flag: 'PH' },
+  { api_id: 10038, group_name: 'Grupp G', home_team: 'Senegal', away_team: 'Croatia', kickoff: '2026-06-17T00:00:00Z', home_flag: 'SN', away_flag: 'HR' },
+  { api_id: 10039, group_name: 'Grupp G', home_team: 'England', away_team: 'Croatia', kickoff: '2026-06-20T18:00:00Z', home_flag: 'GB-ENG', away_flag: 'HR' },
+  { api_id: 10040, group_name: 'Grupp G', home_team: 'Senegal', away_team: 'Philippines', kickoff: '2026-06-21T00:00:00Z', home_flag: 'SN', away_flag: 'PH' },
+  { api_id: 10041, group_name: 'Grupp G', home_team: 'England', away_team: 'Senegal', kickoff: '2026-06-24T21:00:00Z', home_flag: 'GB-ENG', away_flag: 'SN' },
+  { api_id: 10042, group_name: 'Grupp G', home_team: 'Croatia', away_team: 'Philippines', kickoff: '2026-06-24T21:00:00Z', home_flag: 'HR', away_flag: 'PH' },
+  { api_id: 10043, group_name: 'Grupp H', home_team: 'Netherlands', away_team: 'Yemen', kickoff: '2026-06-18T00:00:00Z', home_flag: 'NL', away_flag: 'YE' },
+  { api_id: 10044, group_name: 'Grupp H', home_team: 'Algeria', away_team: 'Ecuador', kickoff: '2026-06-18T21:00:00Z', home_flag: 'DZ', away_flag: 'EC' },
+  { api_id: 10045, group_name: 'Grupp H', home_team: 'Netherlands', away_team: 'Ecuador', kickoff: '2026-06-21T18:00:00Z', home_flag: 'NL', away_flag: 'EC' },
+  { api_id: 10046, group_name: 'Grupp H', home_team: 'Algeria', away_team: 'Yemen', kickoff: '2026-06-23T00:00:00Z', home_flag: 'DZ', away_flag: 'YE' },
+  { api_id: 10047, group_name: 'Grupp H', home_team: 'Netherlands', away_team: 'Algeria', kickoff: '2026-06-25T21:00:00Z', home_flag: 'NL', away_flag: 'DZ' },
+  { api_id: 10048, group_name: 'Grupp H', home_team: 'Ecuador', away_team: 'Yemen', kickoff: '2026-06-25T21:00:00Z', home_flag: 'EC', away_flag: 'YE' },
+  { api_id: 10049, group_name: 'Grupp I', home_team: 'Italy', away_team: 'Bangladesh', kickoff: '2026-06-18T18:00:00Z', home_flag: 'IT', away_flag: 'BD' },
+  { api_id: 10050, group_name: 'Grupp I', home_team: 'Mexico I', away_team: 'Cameroon', kickoff: '2026-06-19T21:00:00Z', home_flag: 'MX', away_flag: 'CM' },
+  { api_id: 10051, group_name: 'Grupp I', home_team: 'Italy', away_team: 'Cameroon', kickoff: '2026-06-22T18:00:00Z', home_flag: 'IT', away_flag: 'CM' },
+  { api_id: 10052, group_name: 'Grupp I', home_team: 'Mexico I', away_team: 'Bangladesh', kickoff: '2026-06-23T18:00:00Z', home_flag: 'MX', away_flag: 'BD' },
+  { api_id: 10053, group_name: 'Grupp I', home_team: 'Italy', away_team: 'Mexico I', kickoff: '2026-06-26T21:00:00Z', home_flag: 'IT', away_flag: 'MX' },
+  { api_id: 10054, group_name: 'Grupp I', home_team: 'Cameroon', away_team: 'Bangladesh', kickoff: '2026-06-26T21:00:00Z', home_flag: 'CM', away_flag: 'BD' },
+  { api_id: 10055, group_name: 'Grupp J', home_team: 'Australia', away_team: 'Indonesia', kickoff: '2026-06-19T18:00:00Z', home_flag: 'AU', away_flag: 'ID' },
+  { api_id: 10056, group_name: 'Grupp J', home_team: 'Nigeria', away_team: 'Poland', kickoff: '2026-06-20T21:00:00Z', home_flag: 'NG', away_flag: 'PL' },
+  { api_id: 10057, group_name: 'Grupp J', home_team: 'Australia', away_team: 'Poland', kickoff: '2026-06-24T00:00:00Z', home_flag: 'AU', away_flag: 'PL' },
+  { api_id: 10058, group_name: 'Grupp J', home_team: 'Nigeria', away_team: 'Indonesia', kickoff: '2026-06-24T18:00:00Z', home_flag: 'NG', away_flag: 'ID' },
+  { api_id: 10059, group_name: 'Grupp J', home_team: 'Australia', away_team: 'Nigeria', kickoff: '2026-06-27T21:00:00Z', home_flag: 'AU', away_flag: 'NG' },
+  { api_id: 10060, group_name: 'Grupp J', home_team: 'Poland', away_team: 'Indonesia', kickoff: '2026-06-27T21:00:00Z', home_flag: 'PL', away_flag: 'ID' },
+  { api_id: 10061, group_name: 'Grupp K', home_team: 'Canada', away_team: 'Kenya', kickoff: '2026-06-21T00:00:00Z', home_flag: 'CA', away_flag: 'KE' },
+  { api_id: 10062, group_name: 'Grupp K', home_team: 'Uruguay', away_team: 'Iraq', kickoff: '2026-06-21T21:00:00Z', home_flag: 'UY', away_flag: 'IQ' },
+  { api_id: 10063, group_name: 'Grupp K', home_team: 'Canada', away_team: 'Iraq', kickoff: '2026-06-25T00:00:00Z', home_flag: 'CA', away_flag: 'IQ' },
+  { api_id: 10064, group_name: 'Grupp K', home_team: 'Uruguay', away_team: 'Kenya', kickoff: '2026-06-25T18:00:00Z', home_flag: 'UY', away_flag: 'KE' },
+  { api_id: 10065, group_name: 'Grupp K', home_team: 'Canada', away_team: 'Uruguay', kickoff: '2026-06-28T21:00:00Z', home_flag: 'CA', away_flag: 'UY' },
+  { api_id: 10066, group_name: 'Grupp K', home_team: 'Iraq', away_team: 'Kenya', kickoff: '2026-06-28T21:00:00Z', home_flag: 'IQ', away_flag: 'KE' },
+  { api_id: 10067, group_name: 'Grupp L', home_team: 'Colombia', away_team: 'Ivory Coast', kickoff: '2026-06-22T21:00:00Z', home_flag: 'CO', away_flag: 'CI' },
+  { api_id: 10068, group_name: 'Grupp L', home_team: 'Switzerland', away_team: 'Slovakia', kickoff: '2026-06-23T21:00:00Z', home_flag: 'CH', away_flag: 'SK' },
+  { api_id: 10069, group_name: 'Grupp L', home_team: 'Colombia', away_team: 'Slovakia', kickoff: '2026-06-26T18:00:00Z', home_flag: 'CO', away_flag: 'SK' },
+  { api_id: 10070, group_name: 'Grupp L', home_team: 'Switzerland', away_team: 'Ivory Coast', kickoff: '2026-06-27T18:00:00Z', home_flag: 'CH', away_flag: 'CI' },
+  { api_id: 10071, group_name: 'Grupp L', home_team: 'Colombia', away_team: 'Switzerland', kickoff: '2026-06-30T21:00:00Z', home_flag: 'CO', away_flag: 'CH' },
+  { api_id: 10072, group_name: 'Grupp L', home_team: 'Slovakia', away_team: 'Ivory Coast', kickoff: '2026-06-30T21:00:00Z', home_flag: 'SK', away_flag: 'CI' },
+];
 
-    .group-label { font-family: 'Barlow Condensed', sans-serif; font-size: 0.75rem; font-weight: 700; letter-spacing: 1px; text-transform: uppercase; color: var(--green); margin: 1.25rem 0 6px; }
+app.get('/api/fixtures', async (req, res) => {
+  const { data, error } = await supabase.from('fixtures').select('*').order('kickoff', { ascending: true });
+  if (error) return res.status(500).json({ error });
+  res.json(data);
+});
 
-    .match-card { background: var(--card); border: 1px solid var(--border); border-radius: var(--radius); padding: 0.875rem 1rem; margin-bottom: 8px; }
-    .match-card.locked { opacity: 0.6; background: #f9f9f9; }
-    .match-meta { font-size: 0.75rem; color: var(--muted); margin-bottom: 6px; display: flex; justify-content: space-between; }
-    .match-meta .lock-badge { color: var(--red); font-weight: 600; }
-    .match-row { display: flex; align-items: center; gap: 8px; }
-    .team { font-family: 'Barlow Condensed', sans-serif; font-size: 1rem; font-weight: 600; flex: 1; text-align: center; }
-    .score-wrap { display: flex; align-items: center; gap: 5px; }
-    .score-wrap input { width: 44px; height: 38px; text-align: center; font-family: 'Barlow Condensed', sans-serif; font-size: 1.25rem; font-weight: 700; border: 1.5px solid var(--border); border-radius: 8px; background: var(--bg); color: var(--text); transition: border-color 0.2s; }
-    .score-wrap input:focus { outline: none; border-color: var(--green); background: white; }
-    .score-wrap input:disabled { background: #eee; color: #aaa; cursor: not-allowed; }
-    .score-sep { font-family: 'Barlow Condensed', sans-serif; font-size: 1.2rem; color: var(--muted); }
-    .result-display { font-family: 'Barlow Condensed', sans-serif; font-size: 1.4rem; font-weight: 700; color: var(--green); padding: 0 6px; }
+app.get('/api/players', async (req, res) => {
+  const { data, error } = await supabase.from('players').select('*').order('created_at', { ascending: true });
+  if (error) return res.status(500).json({ error });
+  res.json(data);
+});
 
-    .player-select-row { display: flex; align-items: center; gap: 10px; margin-bottom: 1rem; flex-wrap: wrap; }
-    .player-select-row label { font-size: 0.85rem; color: var(--muted); white-space: nowrap; }
-    select, input[type="text"] { font-family: 'Barlow', sans-serif; font-size: 0.9rem; border: 1.5px solid var(--border); border-radius: 8px; padding: 8px 12px; background: white; color: var(--text); transition: border-color 0.2s; }
-    select:focus, input[type="text"]:focus { outline: none; border-color: var(--green); }
+app.post('/api/players', async (req, res) => {
+  const { name } = req.body;
+  if (!name?.trim()) return res.status(400).json({ error: 'Nimi puudub' });
+  const { data, error } = await supabase.from('players').insert({ name: name.trim() }).select().single();
+  if (error) return res.status(500).json({ error });
+  res.json(data);
+});
 
-    .player-row { display: flex; gap: 8px; margin-bottom: 8px; }
-    .player-row input { flex: 1; }
+app.get('/api/predictions/:playerName', async (req, res) => {
+  const { data, error } = await supabase.from('predictions').select('*').eq('player_name', req.params.playerName);
+  if (error) return res.status(500).json({ error });
+  res.json(data);
+});
 
-    .btn { display: inline-block; padding: 10px 20px; font-family: 'Barlow Condensed', sans-serif; font-size: 1rem; font-weight: 700; letter-spacing: 0.5px; text-transform: uppercase; border-radius: 8px; cursor: pointer; border: none; transition: all 0.15s; }
-    .btn-green { background: var(--green); color: white; }
-    .btn-green:hover { background: var(--green-dark); }
-    .btn-green:disabled { background: #aaa; cursor: not-allowed; }
-    .btn-outline { background: transparent; border: 1.5px dashed var(--border); color: var(--muted); width: 100%; margin-top: 6px; }
-    .btn-outline:hover { border-color: var(--green); color: var(--green); }
-    .btn-del { background: var(--red-light); border: 1px solid #f5c6c2; color: var(--red); border-radius: 8px; padding: 8px 12px; cursor: pointer; font-size: 0.85rem; flex-shrink: 0; }
-
-    .saved-ok { display: inline-block; margin-left: 10px; color: var(--green); font-size: 0.85rem; font-weight: 500; opacity: 0; transition: opacity 0.3s; }
-    .saved-ok.show { opacity: 1; }
-    .err-msg { color: var(--red); font-size: 0.85rem; margin-top: 6px; }
-
-    /* Leaderboard */
-    table { width: 100%; border-collapse: collapse; }
-    th { font-family: 'Barlow Condensed', sans-serif; font-size: 0.75rem; font-weight: 700; text-transform: uppercase; letter-spacing: 0.5px; color: var(--muted); padding: 8px 10px; border-bottom: 2px solid var(--border); text-align: left; }
-    td { padding: 11px 10px; border-bottom: 1px solid var(--border); font-size: 0.9rem; }
-    tr:last-child td { border-bottom: none; }
-    .pts { font-family: 'Barlow Condensed', sans-serif; font-size: 1.1rem; font-weight: 700; color: var(--green); }
-    .legend { background: var(--gold-light); border-left: 3px solid var(--gold); border-radius: 0 8px 8px 0; padding: 10px 14px; font-size: 0.8rem; color: #7a5a0a; margin-top: 1rem; line-height: 1.7; }
-
-    .loading { text-align: center; padding: 2rem; color: var(--muted); font-size: 0.9rem; }
-    .countdown { font-size: 0.75rem; color: var(--red); font-weight: 600; }
-  </style>
-</head>
-<body>
-
-<header>
-  <h1>⚽ MM 2026 Ennustusmäng</h1>
-  <p>Ennusta · Kogu punkte · Võida au</p>
-</header>
-
-<div class="tabs">
-  <button class="tab active" onclick="showTab('mangijad', this)">👥 Mängijad</button>
-  <button class="tab" onclick="showTab('ennustused', this)">✏️ Ennustused</button>
-  <button class="tab" onclick="showTab('mangud', this)">📅 Mängud</button>
-  <button class="tab" onclick="showTab('tabel', this)">🏆 Edetabel</button>
-</div>
-
-<div class="container">
-
-  <!-- MÄNGIJAD -->
-  <div id="tab-mangijad" class="section active">
-    <div class="info-box">Lisa kõik osalejad. Igaüks sisestab oma ennustused "Ennustused" vahekaardil.</div>
-    <div id="players-list"></div>
-    <button class="btn btn-outline" onclick="showAddPlayer()">+ Lisa mängija</button>
-    <div id="add-player-form" style="display:none; margin-top:10px;">
-      <div class="player-row">
-        <input type="text" id="new-player-name" placeholder="Mängija nimi" onkeydown="if(event.key==='Enter')addPlayer()">
-        <button class="btn btn-green" onclick="addPlayer()">Lisa</button>
-      </div>
-      <div class="err-msg" id="player-err"></div>
-    </div>
-  </div>
-
-  <!-- ENNUSTUSED -->
-  <div id="tab-ennustused" class="section">
-    <div class="player-select-row">
-      <label>Kes ennustab?</label>
-      <select id="sel-player" onchange="loadPredictions()" style="min-width:160px;">
-        <option value="">-- Vali mängija --</option>
-      </select>
-    </div>
-    <div id="preds-list"><div class="loading">Vali mängija ülalt</div></div>
-    <div id="preds-actions" style="display:none; margin-top:1rem;">
-      <button class="btn btn-green" onclick="savePredictions()">Salvesta ennustused</button>
-      <span class="saved-ok" id="ok-preds">✓ Salvestatud!</span>
-      <div class="err-msg" id="pred-err"></div>
-    </div>
-  </div>
-
-  <!-- MÄNGUD & TULEMUSED -->
-  <div id="tab-mangud" class="section">
-    <div class="info-box">Tulemused uuendatakse automaatselt pärast iga mängu.</div>
-    <div id="fixtures-list"><div class="loading">Laen mänge...</div></div>
-  </div>
-
-  <!-- EDETABEL -->
-  <div id="tab-tabel" class="section">
-    <div id="leaderboard-wrap"><div class="loading">Laen edetabelit...</div></div>
-  </div>
-
-</div>
-
-<script>
-const BASE = '';
-let allFixtures = [];
-let allPlayers = [];
-let currentPreds = {};
-
-// ── Helpers ──────────────────────────────────────────────────────────────────
-function flash(id) {
-  const el = document.getElementById(id);
-  el.classList.add('show');
-  setTimeout(() => el.classList.remove('show'), 2500);
-}
-
-function isLocked(fixture) {
+app.post('/api/predictions', async (req, res) => {
+  const { player_name, fixture_id, home_score, away_score } = req.body;
+  const { data: fixture } = await supabase.from('fixtures').select('kickoff, locked').eq('id', fixture_id).single();
+  if (!fixture) return res.status(404).json({ error: 'Mang ei leitud' });
   const now = new Date();
-  const kickoff = new Date(fixture.kickoff);
-  return fixture.locked || now >= new Date(kickoff.getTime() - 5 * 60 * 1000);
-}
+  const lockTime = new Date(new Date(fixture.kickoff).getTime() - 5 * 60 * 1000);
+  if (now >= lockTime) return res.status(403).json({ error: 'Ennustusaeg on loppenud' });
+  const { data, error } = await supabase.from('predictions').upsert({ player_name, fixture_id, home_score: parseInt(home_score), away_score: parseInt(away_score) }, { onConflict: 'player_name,fixture_id' }).select().single();
+  if (error) return res.status(500).json({ error });
+  res.json(data);
+});
 
-function formatDate(iso) {
-  const d = new Date(iso);
-  return d.toLocaleDateString('et-EE', { day: 'numeric', month: 'short' }) +
-    ' ' + d.toLocaleTimeString('et-EE', { hour: '2-digit', minute: '2-digit' });
-}
-
-function minutesUntil(iso) {
-  const diff = new Date(iso) - new Date();
-  if (diff <= 0) return null;
-  const mins = Math.floor(diff / 60000);
-  if (mins < 60) return `${mins} min`;
-  const hrs = Math.floor(mins / 60);
-  if (hrs < 24) return `${hrs} h ${mins % 60} min`;
-  return `${Math.floor(hrs/24)} päeva`;
-}
-
-// ── Tabs ─────────────────────────────────────────────────────────────────────
-function showTab(name, btn) {
-  document.querySelectorAll('.section').forEach(s => s.classList.remove('active'));
-  document.querySelectorAll('.tab').forEach(b => b.classList.remove('active'));
-  document.getElementById('tab-' + name).classList.add('active');
-  btn.classList.add('active');
-  if (name === 'ennustused') { loadPlayers(); loadFixtures(); }
-  if (name === 'mangud') renderFixtures();
-  if (name === 'tabel') loadLeaderboard();
-}
-
-// ── Players ───────────────────────────────────────────────────────────────────
-async function loadPlayers() {
-  const res = await fetch(`${BASE}/api/players`);
-  allPlayers = await res.json();
-  renderPlayers();
-  updatePlayerSelect();
-}
-
-function renderPlayers() {
-  document.getElementById('players-list').innerHTML = allPlayers.length === 0
-    ? '<div class="warn-box">Mängijaid pole veel lisatud.</div>'
-    : allPlayers.map(p => `
-        <div class="player-row" style="margin-bottom:8px;">
-          <input type="text" value="${p.name}" disabled style="flex:1; background:#f9f9f9;">
-        </div>`).join('');
-}
-
-function updatePlayerSelect() {
-  const sel = document.getElementById('sel-player');
-  const cur = sel.value;
-  sel.innerHTML = '<option value="">-- Vali mängija --</option>' +
-    allPlayers.map(p => `<option value="${p.name}" ${p.name===cur?'selected':''}>${p.name}</option>`).join('');
-}
-
-function showAddPlayer() {
-  document.getElementById('add-player-form').style.display = 'block';
-  document.getElementById('new-player-name').focus();
-}
-
-async function addPlayer() {
-  const name = document.getElementById('new-player-name').value.trim();
-  document.getElementById('player-err').textContent = '';
-  if (!name) return;
-  const res = await fetch(`${BASE}/api/players`, {
-    method: 'POST',
-    headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify({ name })
-  });
-  const data = await res.json();
-  if (!res.ok) {
-    document.getElementById('player-err').textContent = data.error?.message?.includes('unique') ? 'See nimi on juba olemas!' : 'Viga lisamisel';
-    return;
-  }
-  document.getElementById('new-player-name').value = '';
-  document.getElementById('add-player-form').style.display = 'none';
-  await loadPlayers();
-}
-
-// ── Fixtures ──────────────────────────────────────────────────────────────────
-async function loadFixtures() {
-  const res = await fetch(`${BASE}/api/fixtures`);
-  allFixtures = await res.json();
-}
-
-function renderFixtures() {
-  loadFixtures().then(() => {
-    if (!allFixtures.length) {
-      document.getElementById('fixtures-list').innerHTML = '<div class="loading">Mängud laetakse...</div>';
-      return;
-    }
-    const groups = {};
-    allFixtures.forEach(f => {
-      const g = f.group_name || 'Muud';
-      if (!groups[g]) groups[g] = [];
-      groups[g].push(f);
+app.get('/api/leaderboard', async (req, res) => {
+  const { data: predictions } = await supabase.from('predictions').select('*');
+  const { data: fixtures } = await supabase.from('fixtures').select('*').not('result_home', 'is', null);
+  const { data: players } = await supabase.from('players').select('*');
+  const scores = {};
+  players.forEach(p => { scores[p.name] = { name: p.name, points: 0, exact: 0, correct: 0, played: 0 }; });
+  fixtures.forEach(f => {
+    predictions.filter(p => p.fixture_id === f.id).forEach(pred => {
+      if (!scores[pred.player_name]) return;
+      const ph = pred.home_score, pa = pred.away_score, rh = f.result_home, ra = f.result_away;
+      scores[pred.player_name].played += 1;
+      if (ph === rh && pa === ra) { scores[pred.player_name].points += 3; scores[pred.player_name].exact += 1; }
+      else { const ps = ph > pa ? 1 : ph < pa ? -1 : 0; const rs = rh > ra ? 1 : rh < ra ? -1 : 0; if (ps === rs) { scores[pred.player_name].points += 1; scores[pred.player_name].correct += 1; } }
     });
-
-    document.getElementById('fixtures-list').innerHTML = Object.entries(groups).map(([g, ms]) => `
-      <div class="group-label">${g}</div>
-      ${ms.map(f => {
-        const hasResult = f.result_home !== null && f.result_away !== null;
-        const until = minutesUntil(f.kickoff);
-        return `<div class="match-card ${isLocked(f) ? 'locked' : ''}">
-          <div class="match-meta">
-            <span>${formatDate(f.kickoff)}</span>
-            ${hasResult
-              ? `<span style="color:var(--green);font-weight:600;">Lõppenud</span>`
-              : until
-                ? `<span class="countdown">⏱ ${until} eni</span>`
-                : `<span class="lock-badge">🔒 Lukus</span>`}
-          </div>
-          <div class="match-row">
-            <div class="team">${f.home_team}</div>
-            ${hasResult
-              ? `<div class="result-display">${f.result_home} – ${f.result_away}</div>`
-              : `<div class="result-display" style="color:var(--muted);">vs</div>`}
-            <div class="team">${f.away_team}</div>
-          </div>
-        </div>`;
-      }).join('')}`).join('');
   });
-}
+  res.json(Object.values(scores).sort((a, b) => b.points - a.points));
+});
 
-// ── Predictions ───────────────────────────────────────────────────────────────
-async function loadPredictions() {
-  const player = document.getElementById('sel-player').value;
-  if (!player) {
-    document.getElementById('preds-list').innerHTML = '<div class="loading">Vali mängija ülalt</div>';
-    document.getElementById('preds-actions').style.display = 'none';
-    return;
+app.post('/api/admin/seed-fixtures', async (req, res) => {
+  try {
+    const fixtures = MM2026_FIXTURES.map(f => ({
+      api_id: f.api_id,
+      home_team: f.home_team,
+      away_team: f.away_team,
+      kickoff: new Date(f.kickoff).toISOString(),
+      group_name: f.group_name,
+      home_flag: f.home_flag,
+      away_flag: f.away_flag,
+      locked: false,
+      result_home: null,
+      result_away: null
+    }));
+    const { error } = await supabase.from('fixtures').upsert(fixtures, { onConflict: 'api_id' });
+    if (error) return res.status(500).json({ error });
+    res.json({ ok: true, count: fixtures.length });
+  } catch (e) {
+    res.status(500).json({ error: e.message });
   }
-  await loadFixtures();
-  const res = await fetch(`${BASE}/api/predictions/${encodeURIComponent(player)}`);
-  const preds = await res.json();
-  currentPreds = {};
-  preds.forEach(p => { currentPreds[p.fixture_id] = { h: p.home_score, a: p.away_score }; });
-  renderPredictions();
-  document.getElementById('preds-actions').style.display = 'block';
-}
+});
 
-function renderPredictions() {
-  if (!allFixtures.length) {
-    document.getElementById('preds-list').innerHTML = '<div class="loading">Mänge pole veel lisatud</div>';
-    return;
-  }
-  const groups = {};
-  allFixtures.forEach(f => {
-    const g = f.group_name || 'Muud';
-    if (!groups[g]) groups[g] = [];
-    groups[g].push(f);
-  });
+cron.schedule('* * * * *', async () => {
+  const soon = new Date(Date.now() + 5 * 60 * 1000);
+  await supabase.from('fixtures').update({ locked: true }).lte('kickoff', soon.toISOString()).eq('locked', false);
+});
 
-  document.getElementById('preds-list').innerHTML = Object.entries(groups).map(([g, ms]) => `
-    <div class="group-label">${g}</div>
-    ${ms.map(f => {
-      const locked = isLocked(f);
-      const pred = currentPreds[f.id] || { h: '', a: '' };
-      const until = minutesUntil(f.kickoff);
-      return `<div class="match-card ${locked ? 'locked' : ''}">
-        <div class="match-meta">
-          <span>${formatDate(f.kickoff)}</span>
-          ${locked
-            ? `<span class="lock-badge">🔒 Lukus</span>`
-            : until ? `<span class="countdown">⏱ ${until} eni</span>` : ''}
-        </div>
-        <div class="match-row">
-          <div class="team">${f.home_team}</div>
-          <div class="score-wrap">
-            <input type="number" min="0" max="20" value="${pred.h}" placeholder="0"
-              ${locked ? 'disabled' : ''}
-              oninput="currentPreds['${f.id}']={...currentPreds['${f.id}']||{}, h:this.value}"
-              id="ph_${f.id}">
-            <span class="score-sep">–</span>
-            <input type="number" min="0" max="20" value="${pred.a}" placeholder="0"
-              ${locked ? 'disabled' : ''}
-              oninput="currentPreds['${f.id}']={...currentPreds['${f.id}']||{}, a:this.value}"
-              id="pa_${f.id}">
-          </div>
-          <div class="team">${f.away_team}</div>
-        </div>
-      </div>`;
-    }).join('')}`).join('');
-}
-
-async function savePredictions() {
-  const player = document.getElementById('sel-player').value;
-  if (!player) return;
-  document.getElementById('pred-err').textContent = '';
-  let saved = 0, errors = 0;
-
-  for (const [fixture_id, pred] of Object.entries(currentPreds)) {
-    if (pred.h === '' || pred.a === '') continue;
-    const res = await fetch(`${BASE}/api/predictions`, {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ player_name: player, fixture_id, home_score: pred.h, away_score: pred.a })
-    });
-    if (res.ok) saved++; else errors++;
-  }
-
-  if (errors > 0) {
-    document.getElementById('pred-err').textContent = `${errors} ennustust ei salvestatud (mäng võib olla lukus)`;
-  }
-  if (saved > 0) flash('ok-preds');
-}
-
-// ── Leaderboard ───────────────────────────────────────────────────────────────
-async function loadLeaderboard() {
-  const res = await fetch(`${BASE}/api/leaderboard`);
-  const scores = await res.json();
-  const medals = ['🥇', '🥈', '🥉'];
-
-  document.getElementById('leaderboard-wrap').innerHTML = scores.length === 0
-    ? '<div class="warn-box">Punkte pole veel. Mängud pole alanud või tulemused puuduvad.</div>'
-    : `<table>
-        <thead><tr>
-          <th></th><th>Mängija</th><th>Täpsed</th><th>Õige tulemus</th><th>Punktid</th>
-        </tr></thead>
-        <tbody>
-          ${scores.map((s, i) => `
-            <tr>
-              <td>${medals[i] || i+1}</td>
-              <td style="font-weight:500">${s.name}</td>
-              <td style="color:var(--green)">${s.exact}× (3p)</td>
-              <td style="color:var(--muted)">${s.correct}× (1p)</td>
-              <td class="pts">${s.points} p</td>
-            </tr>`).join('')}
-        </tbody>
-      </table>
-      <div class="legend">
-        🎯 Täpne tulemus = <strong>3 punkti</strong><br>
-        ✓ Õige võitja / viik = <strong>1 punkt</strong><br>
-        ✗ Vale ennustus = <strong>0 punkti</strong>
-      </div>`;
-}
-
-// ── Init ──────────────────────────────────────────────────────────────────────
-loadPlayers();
-
-// Auto-refresh leaderboard every 5 min
-setInterval(() => {
-  if (document.getElementById('tab-tabel').classList.contains('active')) loadLeaderboard();
-  if (document.getElementById('tab-mangud').classList.contains('active')) renderFixtures();
-}, 5 * 60 * 1000);
-</script>
-</body>
-</html>
-.tabs { display: flex; flex-direction: column; background: var(--green-dark); width: 180px; min-height: 100vh; position: fixed; left: 0; top: 0; padding-top: 80px; }
-.tab { flex: 0;
+const PORT = process.env.PORT || 3000;
+app.listen(PORT, () => console.log(`MM2026 server tootab pordil ${PORT}`));
